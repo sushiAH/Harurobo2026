@@ -21,10 +21,10 @@ from ah_python_can import *
 
 
 def from_twist_to_motor_vel(vx, vy, w, L, fy):
-    V_1 = -(-vy + vx + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_2 = (-vy - vx + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_3 = (vy + vx + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_4 = (vy - vx + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
+    V_1 = (vx + vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
+    V_2 = (-vx - vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
+    V_3 = (vx - vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
+    V_4 = (-vx + vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
 
     return (V_1, V_2, V_3, V_4)
 
@@ -46,15 +46,15 @@ class TwistSubscriber(Node):
         send_packet_1byte(0x012, 0, 3, bus)
         send_packet_1byte(0x013, 0, 3, bus)
 
-        send_packet_4byte(0x010, 9, 50, bus)
-        send_packet_4byte(0x011, 9, 50, bus)
-        send_packet_4byte(0x012, 9, 50, bus)
-        send_packet_4byte(0x013, 9, 50, bus)
+        send_packet_4byte(0x010, 9, 40, bus)
+        send_packet_4byte(0x011, 9, 40, bus)
+        send_packet_4byte(0x012, 9, 40, bus)
+        send_packet_4byte(0x013, 9, 40, bus)
 
-        send_packet_4byte(0x010, 10, 5000, bus)  # set pos_p_gain
-        send_packet_4byte(0x011, 10, 5000, bus)  # set pos_p_gain
-        send_packet_4byte(0x012, 10, 5000, bus)  # set pos_p_gain
-        send_packet_4byte(0x013, 10, 5000, bus)  # set pos_p_gain
+        send_packet_4byte(0x010, 10, 7000, bus)  # set pos_p_gain
+        send_packet_4byte(0x011, 10, 7000, bus)  # set pos_p_gain
+        send_packet_4byte(0x012, 10, 7000, bus)  # set pos_p_gain
+        send_packet_4byte(0x013, 10, 7000, bus)  # set pos_p_gain
 
         send_packet_4byte(0x010, 11, 0, bus)  # set pos_p_gain
         send_packet_4byte(0x011, 11, 0, bus)  # set pos_p_gain

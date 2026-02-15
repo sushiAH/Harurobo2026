@@ -7,12 +7,12 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     publish_twist_node = Node(
-        package="manual_robot",
+        package="harurobo2026",
         executable="publish_twist_node",
     )
 
     subscribe_twist_node = Node(
-        package="manual_robot",
+        package="harurobo2026",
         executable="subscribe_twist_node",
     )
 
@@ -30,11 +30,14 @@ def generate_launch_description():
                               "port": 9090,
                               "address:": "",
                               "retry_startup_delay": 5.0,
+                              "fragment_timeout": 600,
+                              "delay_between_messages": 0.0,
+                              "unregister_timeout": 10.0,
                           }])
 
     ld.add_action(publish_twist_node)
     ld.add_action(subscribe_twist_node)
-    ld.add_action(dyna_handler_node)
+    #ld.add_action(dyna_handler_node)
     ld.add_action(rosbridge_node)
 
     return ld
