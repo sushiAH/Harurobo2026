@@ -19,8 +19,8 @@ def rot(vec, theta):
     cos, sin = np.cos(theta), np.sin(theta)
 
     R = np.array([
-        [cos, sin],
-        [-sin, cos],
+        [cos, -sin],
+        [sin, cos],
     ])
 
     return R @ vec

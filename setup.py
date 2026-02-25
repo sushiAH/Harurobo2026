@@ -27,8 +27,10 @@ setup(
         'console_scripts': [
             "subscribe_twist_node = harurobo2026.subscribe_twist_node:main",
             "publish_twist_node = harurobo2026.publish_twist_node:main",
-            "publish_feedback_node = harurobo2026.publish_feedback_node:main"
-            "dyna_handler_node = ah_ros2_dynamixel.dyna_handler_node:main"
+            "publish_feedback_node = harurobo2026.publish_feedback_node:main",
+            "dyna_handler_node = ah_ros2_dynamixel.dyna_handler_node:main",
+            "control_yagura_node = harurobo2026.control_yagura_node:main",
+            "control_ring_node = harurobo2026.control_ring_node:main",
         ],
     },
 )
