@@ -19,12 +19,15 @@ target_dir = os.path.abspath("/home/aratahorie/ah_python_libraries")
 sys.path.append(target_dir)
 from ah_python_can import *
 
+#const int ENC_PINNUM_A[4] = {19, 17, 21, 15};  足回りのピン
+#const int ENC_PINNUM_B[4] = {23, 18, 16, 2};
+
 
 def from_twist_to_motor_vel(vx, vy, w, L, fy):
-    V_1 = (vx + vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_2 = (-vx - vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_3 = (vx - vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
-    V_4 = (-vx + vy + 2 * math.sqrt(2) * w * L) / (4 * math.pi * fy)
+    V_1 = (vx - vy + 2 * math.sqrt(2) * -w * L) / (4 * math.pi * fy)
+    V_2 = (-vx - vy + 2 * math.sqrt(2) * -w * L) / (4 * math.pi * fy)
+    V_3 = (-vx + vy + 2 * math.sqrt(2) * -w * L) / (4 * math.pi * fy)
+    V_4 = (vx + vy + 2 * math.sqrt(2) * -w * L) / (4 * math.pi * fy)
 
     return (V_1, V_2, V_3, V_4)
 
@@ -40,26 +43,26 @@ class TwistSubscriber(Node):
     def __init__(self):
         super().__init__("TwistSubscriber")
 
-        # can立ち上げ
-        send_packet_1byte(0x010, 0, 3, bus)
-        send_packet_1byte(0x011, 0, 3, bus)
-        send_packet_1byte(0x012, 0, 3, bus)
-        send_packet_1byte(0x013, 0, 3, bus)
+        # 足回り速度制御立ち上げ
+        send_packet_1byte(0x020, 0, 3, bus)  # 速度制御モード
+        send_packet_1byte(0x021, 0, 3, bus)
+        send_packet_1byte(0x022, 0, 3, bus)
+        send_packet_1byte(0x023, 0, 3, bus)
 
-        send_packet_4byte(0x010, 9, 40, bus)
-        send_packet_4byte(0x011, 9, 40, bus)
-        send_packet_4byte(0x012, 9, 40, bus)
-        send_packet_4byte(0x013, 9, 40, bus)
+        send_packet_4byte(0x020, 9, 40, bus)  # 速度pゲイン
+        send_packet_4byte(0x021, 9, 40, bus)
+        send_packet_4byte(0x022, 9, 40, bus)
+        send_packet_4byte(0x023, 9, 40, bus)
 
-        send_packet_4byte(0x010, 10, 7000, bus)  # set pos_p_gain
-        send_packet_4byte(0x011, 10, 7000, bus)  # set pos_p_gain
-        send_packet_4byte(0x012, 10, 7000, bus)  # set pos_p_gain
-        send_packet_4byte(0x013, 10, 7000, bus)  # set pos_p_gain
+        send_packet_4byte(0x020, 10, 7000, bus)  # 速度iゲイン
+        send_packet_4byte(0x021, 10, 7000, bus)
+        send_packet_4byte(0x022, 10, 7000, bus)
+        send_packet_4byte(0x023, 10, 7000, bus)
 
-        send_packet_4byte(0x010, 11, 0, bus)  # set pos_p_gain
-        send_packet_4byte(0x011, 11, 0, bus)  # set pos_p_gain
-        send_packet_4byte(0x012, 11, 0, bus)  # set pos_p_gain
-        send_packet_4byte(0x013, 11, 0, bus)  # set pos_p_gain
+        send_packet_4byte(0x020, 11, 0, bus)  # 速度dゲイン
+        send_packet_4byte(0x021, 11, 0, bus)
+        send_packet_4byte(0x022, 11, 0, bus)
+        send_packet_4byte(0x023, 11, 0, bus)
 
         self.subscription_twist_joy = self.create_subscription(
             Twist,  # メッセージの型
@@ -102,10 +105,10 @@ class TwistSubscriber(Node):
 
         V_1, V_2, V_3, V_4 = from_twist_to_motor_vel(vx, vy, w, self.L, self.fy)
 
-        send_packet_4byte(0x010, 2, V_1, bus)  # set_goal_pos
-        send_packet_4byte(0x011, 2, V_2, bus)  # set_goal_pos
-        send_packet_4byte(0x012, 2, V_3, bus)  # set_goal_pos
-        send_packet_4byte(0x013, 2, V_4, bus)  # set_goal_pos
+        send_packet_4byte(0x020, 2, V_1, bus)  # send_goal_vel
+        send_packet_4byte(0x021, 2, V_2, bus)
+        send_packet_4byte(0x022, 2, V_3, bus)
+        send_packet_4byte(0x023, 2, V_4, bus)
 
 
 def main():
@@ -113,16 +116,17 @@ def main():
 
     twist_subscriber_node = TwistSubscriber()
 
-    rclpy.spin(twist_subscriber_node)  # ノードをスピンさせる
-    twist_subscriber_node.destroy_node()  # ノードを停止する
+    rclpy.spin(twist_subscriber_node)
+    twist_subscriber_node.destroy_node()
     rclpy.shutdown()
 
 
 def stop():
-    send_packet_1byte(0x010, 0, 0, bus)
-    send_packet_1byte(0x011, 0, 0, bus)
-    send_packet_1byte(0x012, 0, 0, bus)
-    send_packet_1byte(0x013, 0, 0, bus)
+    """停止モードにする"""
+    send_packet_1byte(0x020, 0, 0, bus)
+    send_packet_1byte(0x021, 0, 0, bus)
+    send_packet_1byte(0x022, 0, 0, bus)
+    send_packet_1byte(0x023, 0, 0, bus)
 
 
 atexit.register(stop)

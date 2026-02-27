@@ -71,20 +71,20 @@ class TwistPublisher(Node):
             axes_values[1] = 0
         if abs(axes_values[0]) < 0.1:
             axes_values[0] = 0
-        if abs(axes_values[2]) < 0.1:
-            axes_values[2] = 0
+        if abs(axes_values[3]) < 0.1:
+            axes_values[3] = 0
 
         twist = Twist()
 
-        #v = np.array([axes_values[0] * 2, axes_values[1] * 2])
-        #Rv = rot(v, self.yaw_rad)
-        #twist.linear.y = float(Rv[0])
-        #twist.linear.x = float(Rv[1])
-        #twist.angular.z = axes_values[3]
+        v = np.array([-axes_values[0] * 2, -axes_values[1] * 2])
+        Rv = rot(v, self.yaw_rad)
+        twist.linear.y = float(Rv[0])
+        twist.linear.x = float(Rv[1])
+        twist.angular.z = axes_values[3]
 
-        twist.linear.y = -axes_values[0] * 2
-        twist.linear.x = -axes_values[1] * 2
-        twist.angular.z = axes_values[2] * 2
+        #twist.linear.y = axes_values[0] * 2
+        #twist.linear.x = axes_values[1] * 2
+        #twist.angular.z = axes_values[3] * 2
 
         self.twist_publisher.publish(twist)
 

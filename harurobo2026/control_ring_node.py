@@ -30,7 +30,10 @@ target_dir = os.path.abspath("/home/aratahorie/ah_python_libraries")
 sys.path.append(target_dir)
 from ah_python_can import *
 from dyna_lib import *
-from auto_robot_interfaces.msg import DynaFeedback, DynaTarget
+from dyna_interfaces.msg import DynaFeedback, DynaTarget
+
+#const int ENC_PINNUM_A[4] = {19, 18, 21, 15};  足回りのピン
+#const int ENC_PINNUM_B[4] = {23, 17, 16, 2};
 
 # ---- Config ----
 ring_dc_motor_id = 0x011  # リング昇降モーターid
@@ -75,17 +78,19 @@ class RingController(Node):
 
         self.now_button_state = [0, 0, 0]  #[昇降、ハンド、回転]
         self.last_button_state = [0, 0, 0]
-        self.state_counter = [0, 0, 0]
+
+        self.now_state_counter = [0, 0, 0]
+        self.last_state_counter = [0, 0, 0]
 
         self.now_physwitch_state = 0
         self.last_physwitch_state = 0
-        self.init_status = 0
+        self.init_flag = 1  #初期化flag
 
         self.timer = self.create_timer(0.01, self.timer_callback)
 
         #pwm mode
         send_packet_1byte(ring_dc_motor_id, 0, 4, bus)  #停止、内部初期化
-        send_packet_4byte(ring_dc_motor_id, 3, 300, bus)  #初期化のため、下方向に降りる
+        send_packet_4byte(ring_dc_motor_id, 3, -300, bus)  #初期化のため、下方向に降りる
 
     def publish_dyna_pos(self, id, target):
         msg = DynaTarget()
@@ -101,65 +106,77 @@ class RingController(Node):
         """
 
         #受取部分
-        self.now_button_state[0] = msg.buttons[0]
-        self.now_button_state[1] = msg.buttons[1]
-        self.now_button_state[2] = msg.buttons[2]
+        self.now_button_state[0] = msg.axes[7]  #昇降: 十字上下
+        self.now_button_state[1] = msg.buttons[5]  #ハンド: R1
+        self.now_button_state[2] = msg.buttons[4]  #回転: L1
 
     def timer_callback(self):
 
         #昇降機構の初期化処理
         #初期化が終わるまで、他の操作は一切受け付けない
         if (self.now_physwitch_state == 1 and self.last_physwitch_state == 0 and
-                self.init_status == 0):
-
-            # 角度制御モードへの切り替え
-            send_packet_1byte(ring_dc_motor_id, 0, 0, bus)  #停止、内部初期化
-            send_packet_1byte(ring_dc_motor_id, 0, 1, bus)  #init_encoder_pid
-            send_packet_1byte(ring_dc_motor_id, 6, 5, bus)  #set_p_gain
-
-            self.init_status = 1
+                self.init_flag == 0):
+            self.init_flag = 1
 
         #初期化が終わっていなければ、returnでガード
-        if (self.init_status == 0):
+        if (self.init_flag == 0):
             return
 
+        # 角度制御モードへの切り替え
+        send_packet_1byte(ring_dc_motor_id, 0, 0, bus)  #停止、内部初期化
+        send_packet_1byte(ring_dc_motor_id, 0, 1, bus)  #init_encoder_pid
+        send_packet_4byte(ring_dc_motor_id, 6, 5, bus)  #set_p_gain
+
         #ステータス更新
-        self.state_counter[0], self.last_button_state[0] = update_state(
+        self.now_state_counter[0], self.last_button_state[0] = update_state(
             self.now_button_state[0], self.last_button_state[0],
-            self.state_counter[0], 4)
+            self.now_state_counter[0], 4)
 
-        self.state_counter[1], self.last_button_state[1] = update_state(
+        self.now_state_counter[1], self.last_button_state[1] = update_state(
             self.now_button_state[1], self.last_button_state[1],
-            self.state_counter[1], 2)
+            self.now_state_counter[1], 2)
 
-        self.state_counter[2], self.last_button_state[2] = update_state(
+        self.now_state_counter[2], self.last_button_state[2] = update_state(
             self.now_button_state[2], self.last_button_state[2],
-            self.state_counter[2], 2)
+            self.now_state_counter[2], 2)
 
         #動作部分
-        #昇降
-        if (self.state_counter[0] == 0):
-            send_packet_4byte(ring_dc_motor_id, 1, 1300, bus)  # 昇降　１番下
-        elif (self.state_counter[0] == 1):
-            send_packet_4byte(ring_dc_motor_id, 1, 1300, bus)  # 昇降　段差超え
-        elif (self.state_counter[0] == 2):
-            send_packet_4byte(ring_dc_motor_id, 1, 1300, bus)  # 昇降　櫓
-        elif (self.state_counter[0] == 3):
-            send_packet_4byte(ring_dc_motor_id, 1, 1300, bus)  # 昇降　Vゴール
 
         #ハンド
-        if (self.state_counter[1] == 0):
-            self.publish_dyna_pos(1, 0)  # 閉じる
-            self.publish_dyna_pos(2, 0)  # 閉じる
-        elif (self.state_counter[1] == 1):
-            self.publish_dyna_pos(1, 0)  # 開く
-            self.publish_dyna_pos(2, 0)  # 開く
+        if (self.now_state_counter[1] == 0 and self.last_state_counter[1] == 0):
+            self.publish_dyna_pos(4, 2000)  # hidari: 閉じる
+            self.publish_dyna_pos(5, 3200)  # 閉じる
+            self.last_state_counter[1] = 1
+
+        elif (self.now_state_counter[1] == 1 and
+              self.last_state_counter[1] == 1):
+            self.publish_dyna_pos(4, 2700)  # 開く
+            self.publish_dyna_pos(5, 2500)  # 開く
+            self.last_state_counter[1] = 0
 
         #回転
-        if (self.state_counter[2] == 0):
-            self.publish_dyna_pos(3, 0)  # 0度
-        elif (self.state_counter[2] == 1):
-            self.publish_dyna_pos(3, 0)  # 180度
+        if (self.now_state_counter[2] == 0 and self.last_state_counter[2] == 0):
+            self.publish_dyna_pos(3, 1050)  # 0度
+            self.last_state_counter[2] = 1
+
+        elif (self.now_state_counter[2] == 1 and
+              self.last_state_counter[2] == 1):
+            self.publish_dyna_pos(3, 3050)  # 180度
+            self.last_state_counter[2] = 0
+
+        #昇降
+        if (self.now_state_counter[0] == 0):
+            send_packet_4byte(ring_dc_motor_id, 1, 0, bus)  # 昇降　１番上 Vゴール
+        elif (self.now_state_counter[0] == 3):
+            send_packet_4byte(ring_dc_motor_id, 1, -2300, bus)  # 昇降　櫓
+        elif (self.now_state_counter[0] == 2):
+            send_packet_4byte(ring_dc_motor_id, 1, -3300, bus)  # 昇降　段差超え
+        elif (self.now_state_counter[0] == 1):
+            send_packet_4byte(ring_dc_motor_id, 1, -4000, bus)  # 昇降　取得
+
+        print("昇降", self.now_state_counter[0])
+        print("ハンド", self.now_state_counter[1])
+        print("回転", self.now_state_counter[2])
 
 
 def main():

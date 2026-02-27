@@ -15,7 +15,7 @@ target_dir = os.path.abspath("/home/aratahorie/ah_python_libraries")
 sys.path.append(target_dir)
 from ah_python_can import *
 from dyna_lib import *
-from auto_robot_interfaces.msg import DynaFeedback, DynaTarget
+from dyna_interfaces.msg import DynaFeedback, DynaTarget
 
 bus = can.interface.Bus(bustype="socketcan",
                         channel="can0",
@@ -61,10 +61,10 @@ class YaguraController(Node):
                                                         "/dyna_target_pos", 10)
         # air
         send_packet_1byte(0x010, 0, 5, bus)
-        send_packet_1byte(0x011, 0, 5, bus)
-        send_packet_1byte(0x012, 0, 5, bus)
-        send_packet_1byte(0x013, 0, 5, bus)
-        send_packet_1byte(0x020, 0, 5, bus)
+        send_packet_1byte(0x030, 0, 5, bus)
+        send_packet_1byte(0x031, 0, 5, bus)
+        send_packet_1byte(0x032, 0, 5, bus)
+        send_packet_1byte(0x033, 0, 5, bus)
 
         self.now_button_state = [0, 0, 0, 0, 0]
         self.last_button_state = [0, 0, 0, 0, 0]
@@ -84,11 +84,16 @@ class YaguraController(Node):
         """
 
         #受取部分
-        self.now_button_state[0] = msg.buttons[0]
-        self.now_button_state[1] = msg.buttons[1]
-        self.now_button_state[2] = msg.buttons[2]
-        self.now_button_state[3] = msg.buttons[3]
-        self.now_button_state[4] = msg.buttons[4]
+        if (msg.axes[5] < 0.5):
+            msg.axes[5] = 1.0
+        else:
+            msg.axes[5] = 0.0
+
+        self.now_button_state[0] = msg.axes[5]  #R2: 押出
+        self.now_button_state[1] = msg.buttons[0]  #バツ: 櫓上下
+        self.now_button_state[2] = msg.buttons[1]  #丸: 手前
+        self.now_button_state[3] = msg.buttons[2]  #三角: 中
+        self.now_button_state[4] = msg.buttons[3]  #四角: 奥
 
         #ステータス更新
         self.state_counter[0], self.last_button_state[0] = update_state(
@@ -113,10 +118,16 @@ class YaguraController(Node):
 
         #動作部分
         send_packet_1byte(0x010, 12, self.state_counter[0], bus)  # air 閉じる
-        send_packet_1byte(0x012, 12, self.state_counter[1], bus)  # air 閉じる
-        send_packet_1byte(0x011, 12, self.state_counter[2], bus)  # air 閉じる
-        send_packet_1byte(0x013, 12, self.state_counter[3], bus)  # air 閉じる
-        send_packet_1byte(0x020, 12, self.state_counter[4], bus)  # air 閉じる
+        send_packet_1byte(0x030, 12, self.state_counter[1], bus)  # air 閉じる
+        send_packet_1byte(0x031, 12, self.state_counter[2], bus)  # air 閉じる
+        send_packet_1byte(0x032, 12, self.state_counter[3], bus)  # air 閉じる
+        send_packet_1byte(0x033, 12, self.state_counter[4], bus)  # air 閉じる
+
+        print("押出", self.state_counter[0])
+        print("昇降", self.state_counter[1])
+        print("手前", self.state_counter[2])
+        print("中", self.state_counter[3])
+        print("奥", self.state_counter[4])
 
 
 def main():
@@ -131,10 +142,10 @@ def main():
 
 def stop():
     send_packet_1byte(0x010, 0, 0, bus)
-    send_packet_1byte(0x011, 0, 0, bus)
-    send_packet_1byte(0x012, 0, 0, bus)
-    send_packet_1byte(0x013, 0, 0, bus)
-    send_packet_1byte(0x020, 0, 0, bus)
+    send_packet_1byte(0x030, 0, 0, bus)
+    send_packet_1byte(0x031, 0, 0, bus)
+    send_packet_1byte(0x032, 0, 0, bus)
+    send_packet_1byte(0x033, 0, 0, bus)
 
 
 atexit.register(stop)
